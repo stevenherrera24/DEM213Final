@@ -190,7 +190,7 @@ grid.arrange(a1 + theme(legend.position="none"),
 #   )) %>%
 #   filter(YEAR %in% c(2018,2019), EDUC != 0)
 # saveRDS(h_region, file = "h_region.Rds")
-h_region <- readRDS(paste0(fileP, "h_region.Rds"))
+# h_region <- readRDS(paste0(fileP, "h_region.Rds"))
 ```
 
 
