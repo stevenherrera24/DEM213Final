@@ -164,7 +164,7 @@ grid.arrange(a1 + theme(legend.position="none"),
              a2, a3, a4, a5, get_legend(a1), ncol=2, nrow = 4, 
              layout_matrix = rbind(c(1,2), c(3,4), c(5,5), c(6,6)),
              widths = c(2, 2), heights = c(1, 1, 1, 0.2),
-             top=textGrob("Mortality by All Causes"))
+             top=textGrob("Mortality by All Causes (per 100,000)"))
 ```
 
 
