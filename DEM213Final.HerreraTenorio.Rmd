@@ -1,0 +1,564 @@
+---
+title: "DEM 213 Final Project"
+author: "Dombrowski & Herrera Tenorio"
+date: "11/19/2021"
+output: pdf_document
+---
+
+```{r include = F}
+# install packages as needed
+pkgTest <- function(x) {
+  if (!require(x,character.only = TRUE))
+    {
+    install.packages(x,repos = "http://cran.r-project.org", dep=TRUE)
+    if(!require(x,character.only = TRUE)) stop("Package not found")
+    }}
+pkgTest("tigris")
+pkgTest("tidyverse")
+pkgTest("ggplot2")
+pkgTest("ipumsr")
+pkgTest("maps")
+pkgTest("sf")
+pkgTest("tools")
+pkgTest("cdlTools")
+pkgTest("grid")
+pkgTest("gridExtra")
+library(tigris)
+library(tidyverse)
+library(ggplot2)
+library(ipumsr)
+library(maps)
+library(sf)
+library(tools)
+library(cdlTools)
+library(grid)
+library(gridExtra)
+knitr::opts_chunk$set(echo = F)
+fileP <- paste0(getwd(), "/DEM213FinalDataFiles/")
+```
+
+
+```{r include=F}
+BlacknMx_all <- read_csv(paste0(fileP, "BlacknMx_all.csv")) 
+AsiannMx_all <- read_csv(paste0(fileP, "AsiannMx_all.csv"))
+NativenMx_all <- read_csv(paste0(fileP, "NativenMx_all.csv"))
+WhitenMx_all <- read_csv(paste0(fileP, "WhitenMx_all.csv"))
+HispanicnMx_all <- read_csv(paste0(fileP, "HispanicnMx_all.csv"))
+
+BlacknMx_all <- BlacknMx_all %>%
+  separate(State, c("STATEFIP", "value"), "[(]", extra = "merge") %>%
+  rename(ID = "STATEFIP") %>%
+  dplyr::select(-value) %>% mutate(Race = "Black", `Crude Rate` = as.double(`Crude Rate`))
+
+AsiannMx_all <- AsiannMx_all %>%
+  separate(State, c("STATEFIP", "value"), "[(]", extra = "merge") %>%
+  rename(ID = "STATEFIP") %>%
+  dplyr::select(-value) %>% mutate(Race = "Asian", `Crude Rate` = as.double(`Crude Rate`))
+
+NativenMx_all <- NativenMx_all %>%
+  separate(State, c("STATEFIP", "value"), "[(]", extra = "merge") %>%
+  rename(ID = "STATEFIP") %>%
+  dplyr::select(-value) %>% mutate(Race = "Native American", `Crude Rate` = as.double(`Crude Rate`))
+
+WhitenMx_all <- WhitenMx_all %>%
+  separate(State, c("STATEFIP", "value"), "[(]", extra = "merge") %>%
+  rename(ID = "STATEFIP") %>%
+  dplyr::select(-value) %>% mutate(Race = "White", `Crude Rate` = as.double(`Crude Rate`))
+
+HispanicnMx_all <- HispanicnMx_all %>%
+  separate(State, c("STATEFIP", "value"), "[(]", extra = "merge") %>%
+  rename(ID = "STATEFIP") %>%
+  dplyr::select(-value) %>% mutate(Race = "Hispanic", `Crude Rate` = as.double(`Crude Rate`))
+
+
+DeathRatesAll <- rbind(BlacknMx_all, AsiannMx_all, NativenMx_all, WhitenMx_all, HispanicnMx_all)
+```
+
+```{r fig.height=6, warning=FALSE, message=FALSE, fig.align = 'center', fig.cap = "Crude Death Rates by Continental U.S. State When Cause of Mortality is for All Causes in 2018-2019"}
+states <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+states$ID <- toTitleCase(states$ID)
+states$ID <- fips(states$ID, to = "FIPS")
+DeathRatesAll$ID <- fips(DeathRatesAll$ID, to = "FIPS")
+
+
+Black_Map_all <- geo_join(states, DeathRatesAll %>% filter(Race=="Black"), "ID", "ID")
+Asian_Map_all <- geo_join(states, DeathRatesAll %>% filter(Race=="Asian"), "ID", "ID")
+Native_Map_all <- geo_join(states, DeathRatesAll %>% filter(Race=="Native American"), "ID", "ID")
+White_Map_all <- geo_join(states, DeathRatesAll %>% filter(Race=="White"), "ID", "ID")
+Hispanic_Map_all <- geo_join(states, DeathRatesAll %>% filter(Race=="Hispanic"), "ID", "ID")
+
+a1 <- ggplot(Black_Map_all) +
+  geom_sf(mapping = aes(fill = `Crude Rate`), lwd = 0.4) + 
+  theme_classic() +
+  labs(fill = "Crude Death Rate",
+       title = "Black, Non-Hispanic") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position="bottom",
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.line = element_blank()) +
+  scale_fill_gradient(low = "white", high = "blue", limits = c(130, 1370))
+
+a2 <- ggplot(Asian_Map_all) +
+  geom_sf(mapping = aes(fill = `Crude Rate`), lwd = 0.4) + 
+  theme_classic() +
+  labs(fill = "Crude Death Rate",
+       title = "Asian, Non-Hispanic") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position="none",
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.line = element_blank()) +
+  scale_fill_gradient(low = "white", high = "blue", limits = c(130, 1370))
+
+a3 <- ggplot(Native_Map_all) +
+  geom_sf(mapping = aes(fill = `Crude Rate`), lwd = 0.4) + 
+  theme_classic() +
+  labs(fill = "Crude Death Rate",
+       title = "Native American, Non-Hispanic") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position="none",
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.line = element_blank()) +
+  scale_fill_gradient(low = "white", high = "blue", limits = c(130, 1370))
+
+a4 <- ggplot(White_Map_all) +
+  geom_sf(mapping = aes(fill = `Crude Rate`), lwd = 0.4) + 
+  theme_classic() +
+  labs(fill = "Crude Death Rate",
+       title = "White, Non-Hispanic") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position="none",
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.line = element_blank()) +
+  scale_fill_gradient(low = "white", high = "blue", limits = c(130, 1370))
+
+a5 <- ggplot(Hispanic_Map_all) +
+  geom_sf(mapping = aes(fill = `Crude Rate`), lwd = 0.4) + 
+  theme_classic() +
+  labs(fill = "Crude Death Rate",
+       title = "Hispanic (All Races)") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position="none",
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.line = element_blank()) +
+  scale_fill_gradient(low = "white", high = "blue", limits = c(130, 1370))
+
+get_legend <- function(myggplot){
+  tmp <- ggplot_gtable(ggplot_build(myggplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
+
+grid.arrange(a1 + theme(legend.position="none"), 
+             a2, a3, a4, a5, get_legend(a1), ncol=2, nrow = 4, 
+             layout_matrix = rbind(c(1,2), c(3,4), c(5,5), c(6,6)),
+             widths = c(2, 2), heights = c(1, 1, 1, 0.2),
+             top=textGrob("Mortality by All Causes"))
+```
+
+
+```{r}
+# ddi <- read_ipums_ddi("usa_00015.xml")
+# h <- read_ipums_micro(ddi)
+# h_region <- h %>%
+#   mutate(DIVISION = case_when(
+#     REGION == 11 ~ "New England Division",
+#     REGION == 12 ~ "Middle Atlantic Division",
+#     REGION == 21 ~ "East North Central Division",
+#     REGION == 22 ~ "West North Central Division",
+#     REGION == 31 ~ "South Atlantic Division",
+#     REGION == 32 ~ "East South Central Division",
+#     REGION == 33 ~ "West South Central Division",
+#     REGION == 41 ~ "Mountain Division",
+#     REGION == 42 ~ "Pacific Division"
+#   ),
+#   REGION = case_when(
+#     REGION %in% c(11,12) ~ "Northeast Region",
+#     REGION %in% c(21,22) ~ "Midwest Region",
+#     REGION %in% c(31,32,33) ~ "South Region",
+#     REGION %in% c(41,42) ~ "West Region"
+#   )) %>%
+#   filter(YEAR %in% c(2018,2019), EDUC != 0)
+# saveRDS(h_region, file = "h_region.Rds")
+h_region <- readRDS(paste0(fileP, "h_region.Rds"))
+```
+
+
+```{r}
+states <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+states$ID <- toTitleCase(states$ID)
+states$ID <- states$ID[!states$ID %in% c(c("Alaska", "Hawaii"))]
+states$ID <- fips(states$ID, to = "FIPS")
+
+# florida
+# florida_data <- h_region %>%
+#   mutate(race = case_when(
+#     RACE == 1 & HISPAN == 0 ~ "White",
+#     RACE == 2 & HISPAN == 0 ~ "Black",
+#     RACE == 3 & HISPAN == 0 ~ "Native American",
+#     RACE > 3 & RACE < 7 & HISPAN == 0 ~ "Asian",
+#     HISPAN > 0 & HISPAN < 9 ~ "Hispanic",
+#     TRUE ~ "other"
+#   ),
+#   age = case_when(
+#     AGE >= 3 & AGE < 5 ~ "03-04",
+#     AGE >= 5 & AGE < 10 ~ "05-09",
+#     AGE >= 10 & AGE < 15 ~ "10-14",
+#     AGE >= 15 & AGE < 20 ~ "15-19",
+#     AGE >= 20 & AGE < 25 ~ "20-24",
+#     AGE >= 25 & AGE < 30 ~ "25-29",
+#     AGE >= 30 & AGE < 35 ~ "30-34",
+#     AGE >= 35 & AGE < 40 ~ "35-39",
+#     AGE >= 40 & AGE < 45 ~ "40-44",
+#     AGE >= 45 & AGE < 50 ~ "45-49",
+#     AGE >= 50 & AGE < 55 ~ "50-54",
+#     AGE >= 55 & AGE < 60 ~ "55-59",
+#     AGE >= 60 & AGE < 65 ~ "60-64",
+#     AGE >= 65 & AGE < 70 ~ "65-69",
+#     AGE >= 70 & AGE < 75 ~ "70-74",
+#     AGE >= 75 & AGE < 80 ~ "75-79",
+#     AGE >= 80 & AGE < 85 ~ "80-84",
+#     AGE >= 85 & AGE < 90 ~ "85-89",
+#     AGE >= 90 ~ "90-96"
+#   )) %>% filter(race != "other", STATEFIP == 12, age != "03-04") %>%
+#   group_by(age, race) %>%
+#   summarize(population = sum(PERWT), .groups = 'drop')
+# saveRDS(florida_data, file = "florida_data.Rds")
+florida_data <- readRDS(paste0(fileP, "florida_data.Rds"))
+
+# california
+# california_data <- h_region %>%
+#   mutate(race = case_when(
+#     RACE == 1 & HISPAN == 0 ~ "White",
+#     RACE == 2 & HISPAN == 0 ~ "Black",
+#     RACE == 3 & HISPAN == 0 ~ "Native American",
+#     RACE > 3 & RACE < 7 & HISPAN == 0 ~ "Asian",
+#     HISPAN > 0 & HISPAN < 9 ~ "Hispanic",
+#     TRUE ~ "other"
+#   ),
+#   age = case_when(
+#     AGE >= 3 & AGE < 5 ~ "03-04",
+#     AGE >= 5 & AGE < 10 ~ "05-09",
+#     AGE >= 10 & AGE < 15 ~ "10-14",
+#     AGE >= 15 & AGE < 20 ~ "15-19",
+#     AGE >= 20 & AGE < 25 ~ "20-24",
+#     AGE >= 25 & AGE < 30 ~ "25-29",
+#     AGE >= 30 & AGE < 35 ~ "30-34",
+#     AGE >= 35 & AGE < 40 ~ "35-39",
+#     AGE >= 40 & AGE < 45 ~ "40-44",
+#     AGE >= 45 & AGE < 50 ~ "45-49",
+#     AGE >= 50 & AGE < 55 ~ "50-54",
+#     AGE >= 55 & AGE < 60 ~ "55-59",
+#     AGE >= 60 & AGE < 65 ~ "60-64",
+#     AGE >= 65 & AGE < 70 ~ "65-69",
+#     AGE >= 70 & AGE < 75 ~ "70-74",
+#     AGE >= 75 & AGE < 80 ~ "75-79",
+#     AGE >= 80 & AGE < 85 ~ "80-84",
+#     AGE >= 85 & AGE < 90 ~ "85-89",
+#     AGE >= 90 ~ "90-96"
+#   )) %>% filter(race != "other", STATEFIP == 6, age != "03-04") %>%
+#   group_by(age, race) %>%
+#   summarize(population = sum(PERWT), .groups = 'drop')
+# saveRDS(california_data, file = "california_data.Rds")
+california_data <- readRDS(paste0(fileP, "california_data.Rds"))
+
+# utah
+# utah_data <- h_region %>%
+#   mutate(race = case_when(
+#     RACE == 1 & HISPAN == 0 ~ "White",
+#     RACE == 2 & HISPAN == 0 ~ "Black",
+#     RACE == 3 & HISPAN == 0 ~ "Native American",
+#     RACE > 3 & RACE < 7 & HISPAN == 0 ~ "Asian",
+#     HISPAN > 0 & HISPAN < 9 ~ "Hispanic",
+#     TRUE ~ "other"
+#   ),
+#   age = case_when(
+#     AGE >= 3 & AGE < 5 ~ "03-04",
+#     AGE >= 5 & AGE < 10 ~ "05-09",
+#     AGE >= 10 & AGE < 15 ~ "10-14",
+#     AGE >= 15 & AGE < 20 ~ "15-19",
+#     AGE >= 20 & AGE < 25 ~ "20-24",
+#     AGE >= 25 & AGE < 30 ~ "25-29",
+#     AGE >= 30 & AGE < 35 ~ "30-34",
+#     AGE >= 35 & AGE < 40 ~ "35-39",
+#     AGE >= 40 & AGE < 45 ~ "40-44",
+#     AGE >= 45 & AGE < 50 ~ "45-49",
+#     AGE >= 50 & AGE < 55 ~ "50-54",
+#     AGE >= 55 & AGE < 60 ~ "55-59",
+#     AGE >= 60 & AGE < 65 ~ "60-64",
+#     AGE >= 65 & AGE < 70 ~ "65-69",
+#     AGE >= 70 & AGE < 75 ~ "70-74",
+#     AGE >= 75 & AGE < 80 ~ "75-79",
+#     AGE >= 80 & AGE < 85 ~ "80-84",
+#     AGE >= 85 & AGE < 90 ~ "85-89",
+#     AGE >= 90 ~ "90-96"
+#   )) %>% filter(race != "other", STATEFIP == 49, age != "03-04") %>%
+#   group_by(age, race) %>%
+#   summarize(population = sum(PERWT), .groups = 'drop')
+# saveRDS(utah_data, file = "utah_data.Rds")
+utah_data <- readRDS(paste0(fileP, "utah_data.Rds"))
+```
+
+
+```{r fig.height=8, warning=FALSE, message=FALSE, fig.align = 'center', fig.cap = "Age Distribution by Race for People in Florida in 2018-2019"}
+# Florida
+b1 <- ggplot(florida_data %>% filter(race == "Black"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,20)) +
+  theme_classic() +
+  labs(title = "Black, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+b2 <- ggplot(florida_data %>% filter(race == "Asian"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,20)) +
+  theme_classic() +
+  labs(title = "Asian, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+b3 <- ggplot(florida_data %>% filter(race == "Native American"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,20)) +
+  theme_classic() +
+  labs(title = "Native American, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+b4 <- ggplot(florida_data %>% filter(race == "White"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,20)) +
+  theme_classic() +
+  labs(title = "White, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+b5 <- ggplot(florida_data %>% filter(race == "Hispanic"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,20)) +
+  theme_classic() +
+  labs(title = "Hispanic (All Races)",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+grid.arrange(b1, b2, b3, b4, b5, ncol=1, nrow = 5, 
+             layout_matrix = rbind(c(1), c(2), c(3), c(4), c(5)),
+             widths = c(2), heights = c(1, 1, 1, 1, 1),
+             top=textGrob("Age Distribution: Florida"))
+```
+
+
+```{r fig.height=8, warning=FALSE, message=FALSE, fig.align = 'center', fig.cap = "Age Distribution by Race for People in California in 2018-2019"}
+# California
+c1 <- ggplot(california_data %>% filter(race == "Black"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,31)) +
+  theme_classic() +
+  labs(title = "Black, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+c2 <- ggplot(california_data %>% filter(race == "Asian"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,31)) +
+  theme_classic() +
+  labs(title = "Asian, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+c3 <- ggplot(california_data %>% filter(race == "Native American"), 
+             mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,31)) +
+  theme_classic() +
+  labs(title = "Native American, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+c4 <- ggplot(california_data %>% filter(race == "White"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,31)) +
+  theme_classic() +
+  labs(title = "White, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+c5 <- ggplot(california_data %>% filter(race == "Hispanic"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,31)) +
+  theme_classic() +
+  labs(title = "Hispanic (All Races)",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+grid.arrange(c1, c2, c3, c4, c5, ncol=1, nrow = 5, 
+             layout_matrix = rbind(c(1), c(2), c(3), c(4), c(5)),
+             widths = c(2), heights = c(1, 1, 1, 1, 1),
+             top=textGrob("Age Distribution: California"))
+```
+
+```{r fig.height=8, warning=FALSE, message=FALSE, fig.align = 'center', fig.cap = "Age Distribution by Race for People in Utah in 2018-2019"}
+# Utah
+d1 <- ggplot(utah_data %>% filter(race == "Black"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,6)) +
+  theme_classic() +
+  labs(title = "Black, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+d2 <- ggplot(utah_data %>% filter(race == "Asian"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,6)) +
+  theme_classic() +
+  labs(title = "Asian, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+d3 <- ggplot(utah_data %>% filter(race == "Native American"), 
+             mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,6)) +
+  theme_classic() +
+  labs(title = "Native American, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+d4 <- ggplot(utah_data %>% filter(race == "White"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,6)) +
+  theme_classic() +
+  labs(title = "White, Non-Hispanic",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+d5 <- ggplot(utah_data %>% filter(race == "Hispanic"), mapping = aes(x = age, y = population/100000)) +
+  geom_bar(stat='identity', fill = "blue")  +
+  scale_y_continuous(limits = c(0,6)) +
+  theme_classic() +
+  labs(title = "Hispanic (All Races)",
+       x = "Age", y = "Population (in 100,000)") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 5),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1),
+        axis.line = element_blank()) +
+  geom_text(aes(label = round(population/100000, 2)),
+            position = "stack", vjust = -0.5, col = "black", size = 2)
+
+grid.arrange(d1, d2, d3, d4, d5, ncol=1, nrow = 5, 
+             layout_matrix = rbind(c(1), c(2), c(3), c(4), c(5)),
+             widths = c(2), heights = c(1, 1, 1, 1, 1),
+             top=textGrob("Age Distribution: Utah"))
+```
+
